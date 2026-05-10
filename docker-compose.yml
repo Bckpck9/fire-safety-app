@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15
+    container_name: fire-safety-db
+    environment:
+      POSTGRES_DB: fire_safety_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ssps2005
+    ports:
+      - '5433:5432'
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+    networks:
+      - fire-network
+
+  backend:
+    build: ./backend
+    container_name: fire-safety-backend
+    depends_on:
+      - db
+    environment:
+      DATABASE_URL: postgresql://postgres:ssps2005@db:5432/fire_safety_db
+      JWT_SECRET: fire_safety_super_secret_key_2026
+      PORT: 4000
+    ports:
+      - '4000:4000'
+    networks:
+      - fire-network
+
+  frontend:
+    build: ./frontend
+    container_name: fire-safety-frontend
+    ports:
+      - '3001:80'
+    depends_on:
+      - backend
+    networks:
+      - fire-network
+
+volumes:
+  pg-data:
+    driver: local
+
+networks:
+  fire-network:
+    driver: bridge
