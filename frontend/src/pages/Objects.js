@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react' // Добавили useCallback
 import { useNavigate } from 'react-router-dom'
 import api from '../api/axios'
 
@@ -14,16 +14,26 @@ function Objects() {
   const [totalPages, setTotalPages] = useState(1)
   const navigate = useNavigate()
 
-  const fetchObjects = async () => {
-    const params = { page, limit: 5 }
-    if (filterRisk) params.riskLevel = filterRisk
-    if (filterType) params.type = filterType
-    const res = await api.get('/objects', { params })
-    setObjects(res.data.objects)
-    setTotalPages(res.data.pages)
-  }
+  // Оборачиваем в useCallback, чтобы ссылка на функцию не менялась при каждом рендере
+  const fetchObjects = useCallback(async () => {
+    try {
+      const params = { page, limit: 5 }
+      if (filterRisk) params.riskLevel = filterRisk
+      if (filterType) params.type = filterType
+      
+      const res = await api.get('/objects', { params })
+      setObjects(res.data.objects)
+      setTotalPages(res.data.pages)
+    } catch (err) {
+      console.error('Ошибка при загрузке данных:', err)
+      setError('Не удалось загрузить список объектов')
+    }
+  }, [page, filterRisk, filterType]) // Функция пересоздается только при изменении этих фильтров
 
-  useEffect(() => { fetchObjects() }, [page, filterRisk, filterType])
+  // Теперь fetchObjects можно безопасно добавить в массив зависимостей
+  useEffect(() => { 
+    fetchObjects() 
+  }, [fetchObjects]) 
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -54,8 +64,12 @@ function Objects() {
 
   const handleDelete = async (id) => {
     if (window.confirm('Удалить объект?')) {
-      await api.delete(`/objects/${id}`)
-      fetchObjects()
+      try {
+        await api.delete(`/objects/${id}`)
+        fetchObjects()
+      } catch (err) {
+        setError('Ошибка при удалении')
+      }
     }
   }
 
@@ -82,7 +96,6 @@ function Objects() {
         </button>
       </div>
 
-      {/* Фильтры */}
       <div style={styles.filters}>
         <select style={styles.filterInput} value={filterRisk}
           onChange={e => { setFilterRisk(e.target.value); setPage(1) }}>
@@ -97,7 +110,6 @@ function Objects() {
         <button style={styles.resetBtn} onClick={resetFilters}>Сбросить</button>
       </div>
 
-      {/* Форма */}
       {showForm && (
         <form onSubmit={handleSubmit} style={styles.form}>
           <h3>{editId ? 'Редактировать объект' : 'Новый объект'}</h3>
@@ -119,7 +131,6 @@ function Objects() {
         </form>
       )}
 
-      {/* Таблица */}
       <table style={styles.table}>
         <thead>
           <tr style={styles.thead}>
@@ -155,7 +166,6 @@ function Objects() {
         </tbody>
       </table>
 
-      {/* Пагинация */}
       {totalPages > 1 && (
         <div style={styles.pagination}>
           <button style={styles.pageBtn} onClick={() => setPage(p => p - 1)} disabled={page === 1}>
