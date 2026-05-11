@@ -29,6 +29,7 @@ function Objects() {
     }
   }, [page, filterRisk, filterType])
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchObjects() }, [page, filterRisk, filterType])
 
   const handleSubmit = async (e) => {
