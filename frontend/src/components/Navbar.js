@@ -1,7 +1,10 @@
 import { Link, useNavigate } from 'react-router-dom'
+import { jwtDecode } from 'jwt-decode'
 
 function Navbar() {
   const navigate = useNavigate()
+  const token = localStorage.getItem('token')
+  const user = token ? jwtDecode(token) : null
 
   const logout = () => {
     localStorage.removeItem('token')
@@ -14,6 +17,9 @@ function Navbar() {
       <div style={styles.links}>
         <Link to="/" style={styles.link}>Главная</Link>
         <Link to="/objects" style={styles.link}>Объекты</Link>
+        {user?.role === 'ADMIN' && (
+          <Link to="/users" style={styles.link}>Пользователи</Link>
+        )}
         <button onClick={logout} style={styles.btn}>Выйти</button>
       </div>
     </nav>

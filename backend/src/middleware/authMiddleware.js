@@ -1,6 +1,6 @@
 const jwt = require('jsonwebtoken')
 
-module.exports = (req, res, next) => {
+const authMiddleware = (req, res, next) => {
   const authHeader = req.headers.authorization
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -17,3 +17,15 @@ module.exports = (req, res, next) => {
     return res.status(401).json({ message: 'Токен недействителен' })
   }
 }
+
+// middleware для проверки роли
+const requireRole = (...roles) => {
+  return (req, res, next) => {
+    if (!roles.includes(req.user.role)) {
+      return res.status(403).json({ message: 'Недостаточно прав' })
+    }
+    next()
+  }
+}
+
+module.exports = { authMiddleware, requireRole }
