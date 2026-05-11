@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react' // Добавили useCallback
+import { useState, useEffect, useCallback } from 'react' 
 import { useNavigate } from 'react-router-dom'
 import api from '../api/axios'
 
@@ -14,7 +14,6 @@ function Objects() {
   const [totalPages, setTotalPages] = useState(1)
   const navigate = useNavigate()
 
-  // Оборачиваем в useCallback, чтобы ссылка на функцию не менялась при каждом рендере
   const fetchObjects = useCallback(async () => {
     try {
       const params = { page, limit: 5 }
@@ -28,12 +27,9 @@ function Objects() {
       console.error('Ошибка при загрузке данных:', err)
       setError('Не удалось загрузить список объектов')
     }
-  }, [page, filterRisk, filterType]) // Функция пересоздается только при изменении этих фильтров
+  }, [page, filterRisk, filterType])
 
-  // Теперь fetchObjects можно безопасно добавить в массив зависимостей
-  useEffect(() => { 
-    fetchObjects() 
-  }, [fetchObjects]) 
+  useEffect(() => { fetchObjects() }, [page, filterRisk, filterType])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
