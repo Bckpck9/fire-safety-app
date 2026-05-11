@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react' 
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../api/axios'
 
@@ -14,23 +14,21 @@ function Objects() {
   const [totalPages, setTotalPages] = useState(1)
   const navigate = useNavigate()
 
-  const fetchObjects = useCallback(async () => {
-    try {
-      const params = { page, limit: 5 }
-      if (filterRisk) params.riskLevel = filterRisk
-      if (filterType) params.type = filterType
-      
-      const res = await api.get('/objects', { params })
-      setObjects(res.data.objects)
-      setTotalPages(res.data.pages)
-    } catch (err) {
-      console.error('Ошибка при загрузке данных:', err)
-      setError('Не удалось загрузить список объектов')
+  useEffect(() => {
+    const fetchObjects = async () => {
+      try {
+        const params = { page, limit: 5 }
+        if (filterRisk) params.riskLevel = filterRisk
+        if (filterType) params.type = filterType
+        const res = await api.get('/objects', { params })
+        setObjects(res.data.objects)
+        setTotalPages(res.data.pages)
+      } catch (err) {
+        setError('Не удалось загрузить список объектов')
+      }
     }
+    fetchObjects()
   }, [page, filterRisk, filterType])
-
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { fetchObjects() }, [page, filterRisk, filterType])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -47,7 +45,7 @@ function Objects() {
       setForm({ name: '', address: '', type: '', riskLevel: 'LOW' })
       setShowForm(false)
       setEditId(null)
-      fetchObjects()
+      setPage(1)
     } catch (err) {
       setError(err.response?.data?.message || 'Ошибка сервера')
     }
@@ -63,7 +61,7 @@ function Objects() {
     if (window.confirm('Удалить объект?')) {
       try {
         await api.delete(`/objects/${id}`)
-        fetchObjects()
+        setPage(1)
       } catch (err) {
         setError('Ошибка при удалении')
       }
