@@ -2,78 +2,86 @@ const bcrypt = require('bcryptjs')
 const jwt = require('jsonwebtoken')
 const prisma = require('../prisma')
 
-const register = async (req, res) => {
-  const { email, login, password } = req.body
+const serializeUser = (user) => ({
+    id: user.id,
+    login: user.login,
+    email: user.emailInfo?.email || '',
+    role: user.role?.name || ''
+})
 
-  if (!email || !login || !password) {
-    return res.status(400).json({ message: 'Заполните все поля' })
-  }
+const login = async (req, res) => {
+    const { login: userLogin, password } = req.body
 
-  try {
-    const existingUser = await prisma.user.findFirst({
-      where: { OR: [{ email }, { login }] }
-    })
-
-    if (existingUser) {
-      return res.status(409).json({ message: 'Пользователь уже существует' })
+    if (!userLogin || !password) {
+        return res.status(400).json({ message: 'Заполните все поля' })
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10)
+    try {
+        const user = await prisma.user.findUnique({
+            where: {
+                login: userLogin
+            },
+            include: {
+                passwordInfo: true,
+                emailInfo: true,
+                role: true
+            }
+        })
 
-    const user = await prisma.user.create({
-      data: { email, login, password: hashedPassword }
-    })
+        if (!user) {
+            return res.status(404).json({ message: 'Пользователь не найден' })
+        }
 
-    res.status(201).json({ message: 'Пользователь зарегистрирован', userId: user.id })
-  } catch (err) {
-    console.error(err)
-    res.status(500).json({ message: 'Ошибка сервера' })
-  }
-}
+        if (!user.passwordInfo) {
+            return res.status(401).json({ message: 'У пользователя не настроен пароль' })
+        }
 
-const loginUser = async (req, res) => {
-  const { login: userLogin, password } = req.body
+        const isMatch = await bcrypt.compare(password, user.passwordInfo.passwordHash)
 
-  if (!userLogin || !password) {
-    return res.status(400).json({ message: 'Заполните все поля' })
-  }
+        if (!isMatch) {
+            return res.status(401).json({ message: 'Неверный пароль' })
+        }
 
-  try {
-    const user = await prisma.user.findUnique({ where: { login: userLogin } })
+        const token = jwt.sign(
+            { id: user.id },
+            process.env.JWT_SECRET,
+            { expiresIn: '24h' }
+        )
 
-    if (!user) {
-      return res.status(404).json({ message: 'Пользователь не найден' })
+        res.json({
+            token,
+            user: serializeUser(user)
+        })
+    } catch (err) {
+        console.error(err)
+        res.status(500).json({ message: 'Ошибка сервера' })
     }
-
-    const isMatch = await bcrypt.compare(password, user.password)
-
-    if (!isMatch) {
-      return res.status(401).json({ message: 'Неверный пароль' })
-    }
-
-    const token = jwt.sign(
-      { id: user.id, role: user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: '24h' }
-    )
-
-    res.json({ token, user: { id: user.id, login: user.login, email: user.email, role: user.role } })
-  } catch (err) {
-    console.error(err)
-    res.status(500).json({ message: 'Ошибка сервера' })
-  }
 }
 
 const getMe = async (req, res) => {
-  try {
-    const user = await prisma.user.findUnique({
-      where: { id: req.user.id },
-      select: { id: true, login: true, email: true, role: true, createdAt: true }
-    })
-    res.json(user)
-  } catch (err) {
-    res.status(500).json({ message: 'Ошибка сервера' })
-  }
+    try {
+        const user = await prisma.user.findUnique({
+            where: {
+                id: req.user.id
+            },
+            include: {
+                emailInfo: true,
+                role: true
+            }
+        })
+
+        if (!user) {
+            return res.status(404).json({ message: 'Пользователь не найден' })
+        }
+
+        res.json(serializeUser(user))
+    } catch (err) {
+        console.error(err)
+        res.status(500).json({ message: 'Ошибка сервера' })
+    }
 }
 
-module.exports = { register, login: loginUser, getMe }
+module.exports = {
+    login,
+    getMe
+}
