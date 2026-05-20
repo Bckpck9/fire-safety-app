@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet'
 import L from 'leaflet'
@@ -78,7 +78,7 @@ function ObjectDetails() {
         CRITICAL: 'Критический'
     }
 
-    const fetchObject = async () => {
+    const fetchObject = useCallback(async () => {
         try {
             setLoading(true)
             setError('')
@@ -107,11 +107,11 @@ function ObjectDetails() {
         } finally {
             setLoading(false)
         }
-    }
+    }, [id])
 
     useEffect(() => {
         fetchObject()
-    }, [id])
+    }, [fetchObject])
 
     const calculateFireTrucks = () => {
         const fireAreaByRisk = {
