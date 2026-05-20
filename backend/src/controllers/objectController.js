@@ -1,4 +1,5 @@
 const prisma = require('../prisma')
+const { sendTelegramAlert } = require('../services/telegramService')
 
 const serializeObject = (obj) => ({
     id: obj.id,
@@ -15,6 +16,25 @@ const serializeObject = (obj) => ({
 
     user: obj.user
 })
+
+const notifyDangerObject = (object, action) => {
+    const riskCode = object.riskLevel?.code
+
+    if (!['HIGH', 'CRITICAL'].includes(riskCode)) {
+        return
+    }
+
+    const message =
+        ` ${action} объект с высоким уровнем риска
+
+Название: ${object.name}
+Адрес: ${object.address}
+Тип: ${object.type?.name || 'Не указан'}
+Риск: ${object.riskLevel?.name || riskCode}
+Пользователь: ${object.user?.login || 'Не указан'}`
+
+    sendTelegramAlert(message)
+}
 
 const getAll = async (req, res) => {
     try {
@@ -164,7 +184,7 @@ const create = async (req, res) => {
                 riskLevel: true
             }
         })
-
+        notifyDangerObject(object, 'Создан')
         res.status(201).json(serializeObject(object))
     } catch (err) {
         console.error(err)
@@ -235,7 +255,7 @@ const update = async (req, res) => {
                 riskLevel: true
             }
         })
-
+        notifyDangerObject(object, 'Обновлён')
         res.json(serializeObject(object))
     } catch (err) {
         console.error(err)

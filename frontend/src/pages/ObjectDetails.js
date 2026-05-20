@@ -52,12 +52,17 @@ function ObjectDetails() {
         flammable: '0',
         evacuation: '0'
     })
+    const [truckCalc, setTruckCalc] = useState({
+        waterIntensity: '0.10',
+        truckCapacity: '20'
+    })
 
     const [mapPoint, setMapPoint] = useState(null)
     const [isEditing, setIsEditing] = useState(false)
     const [error, setError] = useState('')
     const [notice, setNotice] = useState('')
     const [loading, setLoading] = useState(true)
+
 
     const riskColor = {
         LOW: '#27ae60',
@@ -107,6 +112,38 @@ function ObjectDetails() {
     useEffect(() => {
         fetchObject()
     }, [id])
+
+    const calculateFireTrucks = () => {
+        const fireAreaByRisk = {
+            LOW: 50,
+            MEDIUM: 100,
+            HIGH: 200,
+            CRITICAL: 500
+        }
+
+        const fireArea = fireAreaByRisk[object.riskLevel] || 50
+        const waterIntensity = Number(truckCalc.waterIntensity)
+        const truckCapacity = Number(truckCalc.truckCapacity)
+
+        if (!waterIntensity || !truckCapacity || waterIntensity <= 0 || truckCapacity <= 0) {
+            return {
+                fireArea,
+                waterIntensity: 0,
+                requiredWaterFlow: 0,
+                trucks: 1
+            }
+        }
+
+        const requiredWaterFlow = fireArea * waterIntensity
+        const trucks = Math.max(1, Math.ceil(requiredWaterFlow / truckCapacity))
+
+        return {
+            fireArea,
+            waterIntensity,
+            requiredWaterFlow: Math.round(requiredWaterFlow * 10) / 10,
+            trucks
+        }
+    }
 
     const calculateRisk = () => {
         const score =
@@ -387,6 +424,7 @@ function ObjectDetails() {
 
     const calculatedRisk = calculateRisk()
     const defaultCenter = [55.751244, 37.618423]
+    const fireTruckResult = calculateFireTrucks()
 
     return (
         <div style={styles.container}>
@@ -514,6 +552,17 @@ function ObjectDetails() {
                                 </strong>
                             </div>
                         </div>
+                        <div style={styles.infoBlock}>
+                            <span style={styles.label}>Уровень риска</span>
+                            <strong style={styles.value}>
+                                {object.riskLevelName || riskLabel[object.riskLevel] || object.riskLevel}
+                            </strong>
+                        </div>
+
+                        <div style={styles.infoBlock}>
+                            <span style={styles.label}>Рекомендуемое количество пожарных машин</span>
+                            <strong style={styles.value}>{fireTruckResult.trucks}</strong>
+                        </div>
 
                         <div style={styles.mapBlock}>
                             <div style={styles.mapHeader}>
@@ -609,6 +658,71 @@ function ObjectDetails() {
                                 <button style={styles.applyBtn} onClick={applyCalculatedRisk}>
                                     Применить к объекту
                                 </button>
+                            </div>
+                        </div>
+                        <div style={styles.calculator}>
+                            <h3 style={styles.calcTitle}>Расчёт количества пожарных машин</h3>
+
+                            <p style={styles.calcText}>
+                                Расчёт выполняется по упрощённой модели на основе интенсивности подачи воды
+                                и расчётной площади пожара. Требуемый расход воды определяется по формуле
+                                Q = F × J, затем делится на подачу одной пожарной машины.
+                            </p>
+
+                            <div style={styles.calcGrid}>
+                                <div>
+                                    <label style={styles.label}>Тип объекта / интенсивность подачи воды J</label>
+                                    <select
+                                        style={styles.input}
+                                        value={truckCalc.waterIntensity}
+                                        onChange={e => setTruckCalc({ ...truckCalc, waterIntensity: e.target.value })}
+                                    >
+                                        <option value="0.09">Жилой объект — 0.09 л/(м²·с)</option>
+                                        <option value="0.10">Общественный объект — 0.10 л/(м²·с)</option>
+                                        <option value="0.15">Склад — 0.15 л/(м²·с)</option>
+                                        <option value="0.13">Промышленный объект — 0.13 л/(м²·с)</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label style={styles.label}>Подача одной пожарной машины, л/с</label>
+                                    <input
+                                        style={styles.input}
+                                        type="number"
+                                        min="1"
+                                        value={truckCalc.truckCapacity}
+                                        onChange={e => setTruckCalc({ ...truckCalc, truckCapacity: e.target.value })}
+                                    />
+                                </div>
+                            </div>
+
+                            <div style={styles.calcResult}>
+                                <div>
+                                    <span style={styles.label}>Расчётная площадь пожара F</span>
+                                    <strong style={styles.value}>{fireTruckResult.fireArea} м²</strong>
+                                </div>
+
+                                <div>
+                                    <span style={styles.label}>Интенсивность подачи воды J</span>
+                                    <strong style={styles.value}>{fireTruckResult.waterIntensity} л/(м²·с)</strong>
+                                </div>
+
+                                <div>
+                                    <span style={styles.label}>Требуемый расход воды Q</span>
+                                    <strong style={styles.value}>{fireTruckResult.requiredWaterFlow} л/с</strong>
+                                </div>
+
+                                <div>
+                                    <span style={styles.label}>Рекомендуемое количество машин</span>
+                                    <strong style={styles.value}>{fireTruckResult.trucks}</strong>
+                                </div>
+
+                                <div>
+                                    <span style={styles.label}>Формула</span>
+                                    <strong style={styles.value}>
+                                        ceil(({fireTruckResult.fireArea} × {fireTruckResult.waterIntensity}) / {truckCalc.truckCapacity})
+                                    </strong>
+                                </div>
                             </div>
                         </div>
                     </>
