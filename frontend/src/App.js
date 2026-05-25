@@ -1,72 +1,120 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import AccessDenied from './pages/AccessDenied'
+import api from './api/axios'
+
 import Login from './pages/Login'
+import Register from './pages/Register'
 import Dashboard from './pages/Dashboard'
 import Objects from './pages/Objects'
-import Navbar from './components/Navbar'
 import ObjectDetails from './pages/ObjectDetails'
 import Users from './pages/Users'
+import Navbar from './components/Navbar'
+import AuditLog from './pages/AuditLog'
 
-
-//приватный роут
-//Если токен есть — показывает страницу
-//Если нет — перенаправляет (Navigate) на страницу входа.
 const PrivateRoute = ({ children }) => {
   const token = localStorage.getItem('token')
-  return token ? children : <Navigate to="/login" />
+  return token ? children : <Navigate to="/login" replace />
+}
+
+const AdminRoute = ({ children }) => {
+  const [user, setUser] = useState(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    api.get('/auth/me')
+      .then(res => setUser(res.data))
+      .catch(() => setUser(null))
+      .finally(() => setLoading(false))
+  }, [])
+
+  if (loading) {
+    return <div style={{ padding: '40px' }}>Проверка доступа...</div>
+  }
+
+  if (user?.role !== 'ADMIN') {
+    return <Navigate to="/access-denied" replace />
+  }
+
+  return children
+}
+
+const ProtectedLayout = ({ children }) => {
+  return (
+    <PrivateRoute>
+      <Navbar />
+      {children}
+    </PrivateRoute>
+  )
 }
 
 function App() {
   return (
-    //BrowserRouter включает поддержку навигации через адресную строку
     <BrowserRouter>
-
       <Routes>
-
-        <Route
-          path="/users"
-          element={
-            <PrivateRoute>
-              <Navbar />
-              <Users />
-            </PrivateRoute>
-          }
-        />
         <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
 
         <Route
           path="/"
           element={
-            <PrivateRoute>
-              <Navbar />
+            <ProtectedLayout>
               <Dashboard />
-            </PrivateRoute>
+            </ProtectedLayout>
           }
         />
 
         <Route
           path="/objects"
           element={
-            <PrivateRoute>
-              <Navbar />
+            <ProtectedLayout>
               <Objects />
-            </PrivateRoute>
+            </ProtectedLayout>
           }
         />
-
-        <Route path="*" element={<Navigate to="/" />} />
 
         <Route
           path="/objects/:id"
           element={
-            <PrivateRoute>
-              <Navbar />
+            <ProtectedLayout>
               <ObjectDetails />
-            </PrivateRoute>
+            </ProtectedLayout>
           }
         />
+
+        <Route
+          path="/users"
+          element={
+            <ProtectedLayout>
+              <AdminRoute>
+                <Users />
+              </AdminRoute>
+            </ProtectedLayout>
+          }
+        />
+
+        <Route
+          path="/audit-log"
+          element={
+            <ProtectedLayout>
+              <AdminRoute>
+                <AuditLog />
+              </AdminRoute>
+            </ProtectedLayout>
+          }
+        />
+        <Route
+          path="/access-denied"
+          element={
+            <ProtectedLayout>
+              <AccessDenied />
+            </ProtectedLayout>
+          }
+        />
+        <Route path="*" element={<Navigate to="/login" replace />} />
+        <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </BrowserRouter>
-
   )
 }
 

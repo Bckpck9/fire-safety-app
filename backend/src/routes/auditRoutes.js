@@ -1,10 +1,8 @@
 const router = require('express').Router()
-const { getAll, update, remove } = require('../controllers/userController')
+const { getAll } = require('../controllers/auditController')
 const authMiddleware = require('../middleware/authMiddleware')
 const roleMiddleware = require('../middleware/roleMiddleware')
 
 router.get('/', authMiddleware, roleMiddleware('ADMIN'), getAll)
-router.put('/:id', authMiddleware, roleMiddleware('ADMIN'), update)
-router.delete('/:id', authMiddleware, roleMiddleware('ADMIN'), remove)
 
 module.exports = router

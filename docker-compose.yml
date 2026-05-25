@@ -1,23 +1,17 @@
-version: '3.8'
-
 services:
   db:
     image: postgres:15
-    container_name: fire-safety-db
-    environment:
-      POSTGRES_DB: fire_safety_db
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ssps2005
+    container_name: fire-safety-rgr-db
     ports:
-      - '5433:5432'
+      - '5434:5432'
     volumes:
-      - pg-data:/var/lib/postgresql/data
+      - old-pg-data:/var/lib/postgresql/data
     networks:
-      - fire-network
+      - fire-rgr-network
 
   backend:
     build: ./backend
-    container_name: fire-safety-backend
+    container_name: fire-safety-rgr-backend
     depends_on:
       - db
     environment:
@@ -27,25 +21,26 @@ services:
       TELEGRAM_BOT_TOKEN: 8960225870:AAHSIo7rBZZIxK7A1FJWp_uo9qcePUcFbWE
       TELEGRAM_CHAT_ID: -5168417894
     ports:
-      - '4000:4000'
-      - "5555:5555"
+      - '4001:4000'
+      - '5556:5555'
     networks:
-      - fire-network
+      - fire-rgr-network
 
   frontend:
     build: ./frontend
-    container_name: fire-safety-frontend
+    container_name: fire-safety-rgr-frontend
     ports:
-      - '3001:80'
+      - '3002:80'
     depends_on:
       - backend
     networks:
-      - fire-network
+      - fire-rgr-network
 
 volumes:
-  pg-data:
-    driver: local
+  old-pg-data:
+    external: true
+    name: fire-safety-app_pg-data
 
 networks:
-  fire-network:
+  fire-rgr-network:
     driver: bridge

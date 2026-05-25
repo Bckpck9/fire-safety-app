@@ -1,7 +1,7 @@
 import axios from 'axios'
 
 const instance = axios.create({
-    baseURL: 'http://localhost:4000/api'
+    baseURL: 'http://localhost:4001/api'
 })
 //интерцептор перед каждым запросом на сервер автоматически добавляет токен в заголовки
 //срабатывает перед тем как запрос уйдет на сервер
@@ -17,14 +17,19 @@ instance.interceptors.request.use((config) => {
 //интерцептор если токен недействителей, выкидываем пользователя на страницу входа
 //срабатывает после того как пришел ответа от сервера
 instance.interceptors.response.use(
-    //вовзращаем ответ дальше
     (response) => response,
     (error) => {
-        if (error.response?.status === 401) {
-            //удаляем недействительный токе
+        const currentPath = window.location.pathname
+
+        if (
+            error.response?.status === 401 &&
+            currentPath !== '/login' &&
+            currentPath !== '/register'
+        ) {
             localStorage.removeItem('token')
             window.location.href = '/login'
         }
+
         return Promise.reject(error)
     }
 )

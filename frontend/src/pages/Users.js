@@ -62,6 +62,18 @@ function Users() {
             return setError('Введите email пользователя')
         }
 
+        const oldUser = users.find(user => user.id === editId)
+
+        if (oldUser && oldUser.role !== form.role) {
+            const confirmed = window.confirm(
+                `Вы действительно хотите изменить роль пользователя ${oldUser.login} с ${oldUser.role} на ${form.role}?`
+            )
+
+            if (!confirmed) {
+                return
+            }
+        }
+
         try {
             const res = await api.put(`/users/${editId}`, form)
 
@@ -126,6 +138,7 @@ function Users() {
                         onChange={e => setForm({ ...form, role: e.target.value })}
                     >
                         <option value="USER">USER</option>
+                        <option value="SPECIALIST">SPECIALIST</option>
                         <option value="ADMIN">ADMIN</option>
                     </select>
 
