@@ -39,7 +39,6 @@ function ObjectDetails() {
     const navigate = useNavigate()
 
     const [object, setObject] = useState(null)
-    const [currentUser, setCurrentUser] = useState(null)
 
     const [form, setForm] = useState({
         name: '',
@@ -64,16 +63,6 @@ function ObjectDetails() {
     const [notice, setNotice] = useState('')
     const [loading, setLoading] = useState(true)
 
-    const isAdmin = currentUser?.role === 'ADMIN'
-    const isSpecialist = currentUser?.role === 'SPECIALIST'
-    const canEditObject = isAdmin || isSpecialist
-    const canDeleteObject = isAdmin
-
-    useEffect(() => {
-        api.get('/auth/me')
-            .then(res => setCurrentUser(res.data))
-            .catch(() => setCurrentUser(null))
-    }, [])
 
     const riskColor = {
         LOW: '#27ae60',
@@ -462,17 +451,13 @@ function ObjectDetails() {
 
                         {!isEditing && (
                             <div style={styles.buttons}>
-                                {canEditObject && (
-                                    <button style={styles.editBtn} onClick={() => setIsEditing(true)}>
-                                        Изменить
-                                    </button>
-                                )}
+                                <button style={styles.editBtn} onClick={() => setIsEditing(true)}>
+                                    Изменить
+                                </button>
 
-                                {canDeleteObject && (
-                                    <button style={styles.deleteBtn} onClick={handleDelete}>
-                                        Удалить
-                                    </button>
-                                )}
+                                <button style={styles.deleteBtn} onClick={handleDelete}>
+                                    Удалить
+                                </button>
                             </div>
                         )}
                     </div>
@@ -610,72 +595,71 @@ function ObjectDetails() {
                                 )}
                             </MapContainer>
                         </div>
-                        {canEditObject && (
-                            <div style={styles.calculator}>
-                                <h3 style={styles.calcTitle}>Калькулятор уровня угрозы</h3>
 
-                                <p style={styles.calcText}>
-                                    Выберите три параметра, система посчитает балл угрозы и предложит уровень риска.
-                                </p>
+                        <div style={styles.calculator}>
+                            <h3 style={styles.calcTitle}>Калькулятор уровня угрозы</h3>
 
-                                <div style={styles.calcGrid}>
-                                    <div>
-                                        <label style={styles.label}>Количество людей</label>
-                                        <select
-                                            style={styles.input}
-                                            value={threat.people}
-                                            onChange={e => setThreat({ ...threat, people: e.target.value })}
-                                        >
-                                            <option value="0">Мало людей</option>
-                                            <option value="1">Среднее количество</option>
-                                            <option value="2">Много людей</option>
-                                        </select>
-                                    </div>
+                            <p style={styles.calcText}>
+                                Выберите три параметра, система посчитает балл угрозы и предложит уровень риска.
+                            </p>
 
-                                    <div>
-                                        <label style={styles.label}>Горючие материалы</label>
-                                        <select
-                                            style={styles.input}
-                                            value={threat.flammable}
-                                            onChange={e => setThreat({ ...threat, flammable: e.target.value })}
-                                        >
-                                            <option value="0">Почти нет</option>
-                                            <option value="1">Есть умеренно</option>
-                                            <option value="2">Много</option>
-                                        </select>
-                                    </div>
-
-                                    <div>
-                                        <label style={styles.label}>Сложность эвакуации</label>
-                                        <select
-                                            style={styles.input}
-                                            value={threat.evacuation}
-                                            onChange={e => setThreat({ ...threat, evacuation: e.target.value })}
-                                        >
-                                            <option value="0">Простая</option>
-                                            <option value="1">Средняя</option>
-                                            <option value="2">Сложная</option>
-                                        </select>
-                                    </div>
+                            <div style={styles.calcGrid}>
+                                <div>
+                                    <label style={styles.label}>Количество людей</label>
+                                    <select
+                                        style={styles.input}
+                                        value={threat.people}
+                                        onChange={e => setThreat({ ...threat, people: e.target.value })}
+                                    >
+                                        <option value="0">Мало людей</option>
+                                        <option value="1">Среднее количество</option>
+                                        <option value="2">Много людей</option>
+                                    </select>
                                 </div>
 
-                                <div style={styles.calcResult}>
-                                    <div>
-                                        <span style={styles.label}>Балл угрозы</span>
-                                        <strong style={styles.value}>{calculatedRisk.score}</strong>
-                                    </div>
+                                <div>
+                                    <label style={styles.label}>Горючие материалы</label>
+                                    <select
+                                        style={styles.input}
+                                        value={threat.flammable}
+                                        onChange={e => setThreat({ ...threat, flammable: e.target.value })}
+                                    >
+                                        <option value="0">Почти нет</option>
+                                        <option value="1">Есть умеренно</option>
+                                        <option value="2">Много</option>
+                                    </select>
+                                </div>
 
-                                    <div>
-                                        <span style={styles.label}>Рассчитанный уровень</span>
-                                        <strong style={styles.value}>{calculatedRisk.label}</strong>
-                                    </div>
-
-                                    <button style={styles.applyBtn} onClick={applyCalculatedRisk}>
-                                        Применить к объекту
-                                    </button>
+                                <div>
+                                    <label style={styles.label}>Сложность эвакуации</label>
+                                    <select
+                                        style={styles.input}
+                                        value={threat.evacuation}
+                                        onChange={e => setThreat({ ...threat, evacuation: e.target.value })}
+                                    >
+                                        <option value="0">Простая</option>
+                                        <option value="1">Средняя</option>
+                                        <option value="2">Сложная</option>
+                                    </select>
                                 </div>
                             </div>
-                        )}
+
+                            <div style={styles.calcResult}>
+                                <div>
+                                    <span style={styles.label}>Балл угрозы</span>
+                                    <strong style={styles.value}>{calculatedRisk.score}</strong>
+                                </div>
+
+                                <div>
+                                    <span style={styles.label}>Рассчитанный уровень</span>
+                                    <strong style={styles.value}>{calculatedRisk.label}</strong>
+                                </div>
+
+                                <button style={styles.applyBtn} onClick={applyCalculatedRisk}>
+                                    Применить к объекту
+                                </button>
+                            </div>
+                        </div>
                         <div style={styles.calculator}>
                             <h3 style={styles.calcTitle}>Расчёт количества пожарных машин</h3>
 

@@ -8,19 +8,17 @@ datasource db {
 }
 
 model User {
-  id               Int      @id @default(autoincrement())
-  login            String   @unique
-  createdAt        DateTime @default(now())
-  roleId           Int?      @map("role_id")
+  id        Int      @id @default(autoincrement())
+  login     String   @unique
+  createdAt DateTime @default(now())
 
-  twoFactorEnabled Boolean  @default(false)
-  twoFactorSecret   String?
+  roleId    Int      @map("role_id")
+  role      Role     @relation(fields: [roleId], references: [id])
 
-  role             Role?     @relation(fields: [roleId], references: [id])
-  emailInfo        UserEmail?
-  passwordInfo     UserPassword?
-  objects          FireObject[]
-  auditLogs        AuditLog[]
+  emailInfo    UserEmail?
+  passwordInfo UserPassword?
+
+  objects FireObject[]
 
   @@map("User")
 }
@@ -95,19 +93,4 @@ model RiskLevel {
   objects FireObject[]
 
   @@map("RiskLevel")
-}
-
-model AuditLog {
-  id        Int      @id @default(autoincrement())
-  userId    Int?     @map("user_id")
-  action    String
-  entity    String?
-  entityId  String?  @map("entity_id")
-  details   String?
-  ip        String?
-  createdAt DateTime @default(now()) @map("created_at")
-
-  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
-
-  @@map("AuditLog")
 }

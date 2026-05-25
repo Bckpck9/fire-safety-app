@@ -1,7 +1,5 @@
 const prisma = require('../prisma')
 const { sendTelegramAlert } = require('../services/telegramService')
-const { writeAuditLog, getClientIp } = require('../services/auditService')
-const { isValidCoordinate } = require('../utils/validation')
 
 const serializeObject = (obj) => ({
     id: obj.id,
@@ -19,13 +17,6 @@ const serializeObject = (obj) => ({
     user: obj.user
 })
 
-const riskLabels = {
-    LOW: 'Низкий',
-    MEDIUM: 'Средний',
-    HIGH: 'Высокий',
-    CRITICAL: 'Критический'
-}
-
 const notifyDangerObject = (object, action) => {
     const riskCode = object.riskLevel?.code
 
@@ -39,48 +30,10 @@ const notifyDangerObject = (object, action) => {
 Название: ${object.name}
 Адрес: ${object.address}
 Тип: ${object.type?.name || 'Не указан'}
-Риск: ${object.riskLevel?.name || riskLabels[riskCode] || riskCode}
+Риск: ${object.riskLevel?.name || riskCode}
 Пользователь: ${object.user?.login || 'Не указан'}`
 
     sendTelegramAlert(message)
-}
-
-const validateObjectInput = ({ name, address, type, riskLevel, latitude, longitude }) => {
-    if (!name || !String(name).trim()) {
-        return 'Введите название объекта'
-    }
-
-    if (!address || !String(address).trim()) {
-        return 'Введите адрес объекта'
-    }
-
-    if (!type || !String(type).trim()) {
-        return 'Введите тип объекта'
-    }
-
-    if (String(name).trim().length < 3) {
-        return 'Название объекта должно быть не короче 3 символов'
-    }
-
-    if (String(address).trim().length < 5) {
-        return 'Адрес объекта должен быть не короче 5 символов'
-    }
-
-    const allowedRiskLevels = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']
-
-    if (riskLevel && !allowedRiskLevels.includes(riskLevel)) {
-        return 'Некорректный уровень риска'
-    }
-
-    if (!isValidCoordinate(latitude, -90, 90)) {
-        return 'Некорректная широта'
-    }
-
-    if (!isValidCoordinate(longitude, -180, 180)) {
-        return 'Некорректная долгота'
-    }
-
-    return null
 }
 
 const getAll = async (req, res) => {
@@ -170,17 +123,8 @@ const create = async (req, res) => {
     try {
         const { name, address, type, riskLevel, latitude, longitude } = req.body
 
-        const validationError = validateObjectInput({
-            name,
-            address,
-            type,
-            riskLevel,
-            latitude,
-            longitude
-        })
-
-        if (validationError) {
-            return res.status(400).json({ message: validationError })
+        if (!name || !address || !type) {
+            return res.status(400).json({ message: 'Заполните все обязательные поля' })
         }
 
         const riskCode = riskLevel || 'LOW'
@@ -207,16 +151,11 @@ const create = async (req, res) => {
 
         const object = await prisma.fireObject.create({
             data: {
-                name: name.trim(),
-                address: address.trim(),
+                name,
+                address,
 
-                latitude: latitude !== undefined && latitude !== null && latitude !== ''
-                    ? Number(latitude)
-                    : null,
-
-                longitude: longitude !== undefined && longitude !== null && longitude !== ''
-                    ? Number(longitude)
-                    : null,
+                latitude: latitude !== undefined && latitude !== null ? Number(latitude) : null,
+                longitude: longitude !== undefined && longitude !== null ? Number(longitude) : null,
 
                 user: {
                     connect: {
@@ -245,18 +184,7 @@ const create = async (req, res) => {
                 riskLevel: true
             }
         })
-
         notifyDangerObject(object, 'Создан')
-
-        await writeAuditLog({
-            userId: req.user.id,
-            action: 'CREATE_OBJECT',
-            entity: 'FireObject',
-            entityId: object.id,
-            details: `Создан объект: ${object.name}, риск: ${riskLabels[object.riskLevel?.code] || object.riskLevel?.code}`,
-            ip: getClientIp(req)
-        })
-
         res.status(201).json(serializeObject(object))
     } catch (err) {
         console.error(err)
@@ -268,17 +196,8 @@ const update = async (req, res) => {
     try {
         const { name, address, type, riskLevel, latitude, longitude } = req.body
 
-        const validationError = validateObjectInput({
-            name,
-            address,
-            type,
-            riskLevel,
-            latitude,
-            longitude
-        })
-
-        if (validationError) {
-            return res.status(400).json({ message: validationError })
+        if (!name || !address || !type) {
+            return res.status(400).json({ message: 'Заполните все обязательные поля' })
         }
 
         const riskCode = riskLevel || 'LOW'
@@ -308,16 +227,11 @@ const update = async (req, res) => {
                 id: Number(req.params.id)
             },
             data: {
-                name: name.trim(),
-                address: address.trim(),
+                name,
+                address,
 
-                latitude: latitude !== undefined && latitude !== null && latitude !== ''
-                    ? Number(latitude)
-                    : null,
-
-                longitude: longitude !== undefined && longitude !== null && longitude !== ''
-                    ? Number(longitude)
-                    : null,
+                latitude: latitude !== undefined && latitude !== null ? Number(latitude) : null,
+                longitude: longitude !== undefined && longitude !== null ? Number(longitude) : null,
 
                 type: {
                     connect: {
@@ -341,18 +255,7 @@ const update = async (req, res) => {
                 riskLevel: true
             }
         })
-
         notifyDangerObject(object, 'Обновлён')
-
-        await writeAuditLog({
-            userId: req.user.id,
-            action: 'UPDATE_OBJECT',
-            entity: 'FireObject',
-            entityId: object.id,
-            details: `Обновлён объект: ${object.name}, риск: ${riskLabels[object.riskLevel?.code] || object.riskLevel?.code}`,
-            ip: getClientIp(req)
-        })
-
         res.json(serializeObject(object))
     } catch (err) {
         console.error(err)
@@ -362,27 +265,10 @@ const update = async (req, res) => {
 
 const remove = async (req, res) => {
     try {
-        const objectId = Number(req.params.id)
-
-        const object = await prisma.fireObject.findUnique({
-            where: {
-                id: objectId
-            }
-        })
-
         await prisma.fireObject.delete({
             where: {
-                id: objectId
+                id: Number(req.params.id)
             }
-        })
-
-        await writeAuditLog({
-            userId: req.user.id,
-            action: 'DELETE_OBJECT',
-            entity: 'FireObject',
-            entityId: objectId,
-            details: `Удалён объект: ${object?.name || 'неизвестный объект'}`,
-            ip: getClientIp(req)
         })
 
         res.json({ message: 'Объект удалён' })
